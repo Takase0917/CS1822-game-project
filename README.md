@@ -42,7 +42,7 @@ Multiple levels based on time survived
 
 
 Welcome screen:
-Canvas size: 800px x 800px
+Canvas size: 700px x 700px
 Background: space themed
 Start game:
 Instructions: avoid asteroids, gain power ups, score based on time lasted
