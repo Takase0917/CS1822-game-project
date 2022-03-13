@@ -157,7 +157,6 @@ class Interaction:
 
             if not shipmete:
                 self.in_collision.add((spaceship, meteorite))
-            else:
 
                 # check wether the meteorite within the canvas
 

@@ -1,6 +1,7 @@
 try:
     import simplegui
     import random
+    import math
 except ImportError:
     import SimpleGUICS2Pygame.simpleguics2pygame as simplegui
 
@@ -181,12 +182,14 @@ img_rot = 0
 
 # Global variables
 img_dest_dim = (90, 90)
+
+
 class Score:
     SCORE_TEXT_SIZE = 50
     SCORE_TEXT_COLOR = "white"
-    
+
     def __init__(self, pos, score_val):
-        self.pos = pos        
+        self.pos = pos
         self.score_val = score_val
 
     def draw(self, canvas):
@@ -194,10 +197,11 @@ class Score:
                          self.pos.get_p(),
                          self.SCORE_TEXT_SIZE,
                          self.SCORE_TEXT_COLOR)
-        
+
     def update(self, score_value):
         self.score_val == score_value
-        
+
+
 class Countdown:
     CLOCK_TEXT_SIZE = 50
     CLOCK_TEXT_COLOR = "white"
@@ -206,23 +210,23 @@ class Countdown:
         self.pos = pos
         self.time_left = duration
         self.timer = simplegui.create_timer(1000, self.tick)
-        
+
     def draw(self, canvas):
         canvas.draw_text(str(self.time_left),
                          self.pos.get_p(),
                          self.CLOCK_TEXT_SIZE,
                          self.CLOCK_TEXT_COLOR)
-  
+
     def start(self):
         self.timer.start()
-        
+
     def tick(self):
         if self.time_left > 0:
             self.time_left -= 1
         else:
-            self.timer.stop()        
+            self.timer.stop()
 
-        
+
 class Meteorite:
     def __init__(self, pos, vel, radius):
         self.pos = pos
@@ -239,7 +243,7 @@ class Meteorite:
 
     def get_X(self):
         return Vector.getX(self.pos)
-    
+
     def update(self):
         self.pos.add(self.vel)
 
@@ -320,7 +324,7 @@ class Interaction:
         self.countdown = countdown
         self.score = score
         self.countdown.start()
-        
+
     def draw_handler(self, canvas):
         canvas.draw_image(image, (image_w/2, image_h/2), (WIDTH, HEIGHT),
                           (WIDTH/2, HEIGHT/2), (WIDTH, HEIGHT))  # this is for background
@@ -328,7 +332,7 @@ class Interaction:
         for meteorite in self.meteorite_list:
             meteorite.draw(canvas)  # read the list of meteorite
         self.wheel.draw(canvas)
-        self.countdown.draw(canvas)   
+        self.countdown.draw(canvas)
         self.score.draw(canvas)
 
     def add_random_meteorite(self):
@@ -372,6 +376,7 @@ class Interaction:
         if self.keyboard.down:
             #img_rot += STEP
             self.wheel.vel.add(Vector(0, 1))
+
 
 score = Score(Vector(500, 100), 1000)
 countdown = Countdown(Vector(100, 100), 100)
