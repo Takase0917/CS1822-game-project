@@ -1,9 +1,4 @@
-try:
-    import simplegui
-    import math
-except ImportError:
-    import SimpleGUICS2Pygame.simpleguics2pygame as simplegui
-
+import math
 
 # The Vector class
 
@@ -143,136 +138,28 @@ class Vector:
         return int(self.y)
 
 
-WIDTH = 500
-HEIGHT = 500
-CANVAS_DIMS = (WIDTH, HEIGHT)
-
-image = simplegui.load_image(
-    'https://i.ytimg.com/vi/JPJ1doUobGY/maxresdefault.jpg')
-image_w = 1280
-image_h = 720
-
-IMG_player = simplegui.load_image(
-    'https://clipartpngfree.com/download/sprite-elvish-spacecraft-opengameartorg')
-IMG_CENTRE = (500, 500)
-IMG_DIMS = (1000, 1000)
-
-STEP = 0.9
-img_rot = 0
-
-# Global variables
-img_dest_dim = (90, 90)
-
-
-class Wheel:
-    def __init__(self, pos, radius=10):
-        self.pos = pos
-        self.vel = Vector()
-        self.radius = max(radius, 10)
-        self.colour = '#2C6A6A'
-        self.img_rot = 0
-        self.vel_y = 0
-
-    def draw(self, canvas):
-        global img_rot
-        # it doesn't matter whether there is or not
-        canvas.draw_circle(self.pos.get_p(), self.radius, 1, self.colour)
-        canvas.draw_image(IMG_player, IMG_CENTRE, IMG_DIMS,
-                          self.pos.get_p(), img_dest_dim, img_rot)
-
-    def update(self):
-        self.pos.add(self.vel)
-        self.vel.multiply(0.85)
-        X = self.pos.getX()
-        Y = self.pos.getY()
-        if (X + self.radius) < 0:
-            self.pos.set_p((WIDTH + self.radius), (Y))
-        if (X - self.radius) > WIDTH:
-            self.pos.set_p((0 - self.radius), (Y))
-
-    def on_ground(self):
-        if self.pos.y >= CANVAS_DIMS[1]-40:
-            return True
+class ImageInfo:
+    def __init__(self, center, size, radius=0, lifespan=None, animated=False):
+        self.center = center
+        self.size = size
+        self.radius = radius
+        if lifespan:
+            self.lifespan = lifespan
         else:
-            return False
+            self.lifespan = float('inf')
+        self.animated = animated
 
+    def get_center(self):
+        return self.center
 
-class Keyboard:
-    def __init__(self):
-        self.right = False
-        self.left = False
-        self.up = False
-        self.down = False
+    def get_size(self):
+        return self.size
 
-    def keyDown(self, key):
-        if key == simplegui.KEY_MAP['right']:
-            self.right = True
+    def get_radius(self):
+        return self.radius
 
-        if key == simplegui.KEY_MAP['left']:
-            self.left = True
+    def get_lifespan(self):
+        return self.lifespan
 
-        if key == simplegui.KEY_MAP['up']:
-            self.up = True
-
-        if key == simplegui.KEY_MAP['down']:
-            self.down = True
-
-    def keyUp(self, key):
-        if key == simplegui.KEY_MAP['right']:
-            self.right = False
-
-        if key == simplegui.KEY_MAP['left']:
-            self.left = False
-
-        if key == simplegui.KEY_MAP['up']:
-            self.up = False
-
-        if key == simplegui.KEY_MAP['down']:
-            self.down = False
-
-
-class Interaction:
-    def __init__(self, wheel, keyboard):
-        self.wheel = wheel
-        self.keyboard = keyboard
-
-    def update(self):
-        global img_rot
-
-        if self.keyboard.right:
-            # Still got rotation code if we need it in future
-            #img_rot -= STEP
-            self.wheel.vel.add(Vector(1, 0))
-
-        if self.keyboard.left:
-            #img_rot += STEP
-            self.wheel.vel.add(Vector(-1, 0))
-
-        if self.keyboard.up:
-            #img_rot -= STEP
-            self.wheel.vel.add(Vector(0, -1))
-
-        if self.keyboard.down:
-            #img_rot += STEP
-            self.wheel.vel.add(Vector(0, 1))
-
-
-kbd = Keyboard()
-wheel = Wheel(Vector(CANVAS_DIMS[0]/2, CANVAS_DIMS[1]/2), 40)
-inter = Interaction(wheel, kbd)
-
-
-def draw(canvas):
-    canvas.draw_image(image, (image_w/2, image_h/2),
-                      (500, 500), (WIDTH/2, HEIGHT/2), (500, 500))
-    inter.update()
-    wheel.update()
-    wheel.draw(canvas)
-
-
-frame = simplegui.create_frame('Interactions', CANVAS_DIMS[0], CANVAS_DIMS[1])
-frame.set_canvas_background('#2C6A6A')
-frame.set_draw_handler(draw)
-frame.set_keydown_handler(kbd.keyDown)
-frame.set_keyup_handler(kbd.keyUp)
-frame.start()
+    def get_animated(self):
+        return self.animated
