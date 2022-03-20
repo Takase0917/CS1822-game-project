@@ -146,34 +146,31 @@ class Vector:
 WIDTH = 700
 HEIGHT = 700
 CANVAS_DIMS = (WIDTH, HEIGHT)
+Game_end = False
 
 image = simplegui.load_image(
-    'https://i.ytimg.com/vi/JPJ1doUobGY/maxresdefault.jpg')
+    'http://personal.rhul.ac.uk/zkac/332/background.jpg')
 image_w = 1280
 image_h = 720
 
 IMG_player = simplegui.load_image(
-    'https://clipartpngfree.com/download/sprite-elvish-spacecraft-opengameartorg')
-IMG_DIMS = (1000, 1000)
+    'http://personal.rhul.ac.uk/zkac/332/Player.gif')
+IMG_DIMS = (2058, 1332)
 # this is position of picture not player sprite pos
 IMG_CENTRE = (IMG_DIMS[0]/2, IMG_DIMS[1]/2)
 
-
 # https://pngset.com/images/download-free-asteroid-redirect-asteroid-rock-limestone-moon-outer-space-transparent-png-2831660.png
 IMG_meteorite = simplegui.load_image(
-    'https://clipartpngfree.com/thumbnail/learning/secondary_school_what_to_learn.png')
-IMG_Met_DIMS = (1024, 832)
+    'http://personal.rhul.ac.uk/zkac/332/Meteorite.gif')
+IMG_Met_DIMS = (1803, 1313)
+#1503, 1213
 # this is position of picture not player sprite pos
 IMG_Met_CENTRE = (IMG_Met_DIMS[0]/2, IMG_Met_DIMS[1]/2)
 
-
 STEP = 0.9
 img_rot = 0
-# Global variables
 img_dest_dim = (90, 90)
 
-Game_started = False
-Game_end = False
 
 def rand_meteorite():
     pos = Vector(random.randint(0, WIDTH), -40)
@@ -198,8 +195,9 @@ class Score:
                          self.SCORE_TEXT_COLOR)
 
     def on_hit(self):
-            self.score_val = self.score_val + -1
-              
+        self.score_val = self.score_val + -1
+
+
 class Countdown:
     CLOCK_TEXT_SIZE = 50
     CLOCK_TEXT_COLOR = "white"
@@ -225,9 +223,11 @@ class Countdown:
             self.timer.stop()
 
     def time_end(self):
+        global Game_end
         if self.time_left == 0:
-            print("Game Over!")
-            
+            Game_end = True
+
+
 class Meteorite:
     def __init__(self, pos, vel, radius):
         self.pos = pos
@@ -240,7 +240,7 @@ class Meteorite:
                           IMG_Met_CENTRE,
                           IMG_Met_DIMS,
                           self.pos.get_p(),
-                          img_dest_dim)        
+                          img_dest_dim)
 
     def update(self):
         self.pos.add(self.vel)
@@ -249,7 +249,7 @@ class Meteorite:
 class SpaceShip:
     LIVES_TEXT_SIZE = 50
     LIVES_TEXT_COLOR = "white"
-    
+
     def __init__(self, pos, radius):
         self.pos = pos
         self.vel = Vector()
@@ -263,7 +263,7 @@ class SpaceShip:
         canvas.draw_image(IMG_player, IMG_CENTRE, IMG_DIMS,
                           self.pos.get_p(), img_dest_dim, img_rot)
         canvas.draw_text(str(self.lives),
-                         ((100),(200)),
+                         ((100), (200)),
                          self.LIVES_TEXT_SIZE,
                          self.LIVES_TEXT_COLOR)
 
@@ -280,9 +280,15 @@ class SpaceShip:
             self.pos.set_p((X), (HEIGHT + self.radius))
         if (Y - self.radius) > HEIGHT:
             self.pos.set_p((X), (0 - self.radius))
-    
+
     def ship_hit(self):
         self.lives = self.lives - 1
+
+    def game_over(self):
+        global Game_end
+        if self.lives <= 0:
+            Game_end = True
+
 
 class Keyboard:
     def __init__(self):
@@ -330,7 +336,6 @@ class Interaction:
         self.collision_occured = False
         self.is_mete_nolonger_visible = set()
         self.count = 0
-        
 
     def hit(self, spaceship, meteorite):  # provisional instance val
         distance = spaceship.pos.copy().subtract(meteorite.pos)
@@ -338,16 +343,18 @@ class Interaction:
         return distance.length() <= spaceship.radius + meteorite.radius
 
     def draw_handler(self, canvas):
-        canvas.draw_image(image, (image_w/2, image_h/2), (WIDTH, HEIGHT),
-                          (WIDTH/2, HEIGHT/2), (WIDTH, HEIGHT))  # this is for background
         self.update()
-        if not Game_started:
+        if not Game_end:
+            canvas.draw_image(image, (image_w/2, image_h/2), (WIDTH, HEIGHT),
+                              (WIDTH/2, HEIGHT/2), (WIDTH, HEIGHT))  # this is for background
             for met in self.meteorite:
                 if not met in self.is_mete_nolonger_visible:
                     met.draw(canvas)  # read the list of meteorite
             self.spaceship.draw(canvas)
             self.countdown.draw(canvas)
             self.score.draw(canvas)
+        else:
+            canvas.draw_text('GAME OVER', (215, 300), 50, 'Red', 'monospace')
 
     def collide(self, spaceship, meteorite):
         if self.hit(spaceship, meteorite):
@@ -373,20 +380,13 @@ class Interaction:
 
     def show_rand_mete(self):
         self.meteorite.append(rand_meteorite())
-    
-    def game_over(self):
-        global Game_end, Game_started
-        if spaceship.lives >= 0:
-            Game_end = True
-            Game_started = False
-            
 
     def update(self):
-        global Game_started
         for met in self.meteorite:
             met.update()
         self.spaceship.update()
         self.countdown.time_end()
+        self.spaceship.game_over()
 
         for met in self.meteorite:
             if met != self.spaceship:
@@ -395,18 +395,15 @@ class Interaction:
         for met in self.in_collision:
             if self.collision_occured:
                 self.in_collision.discard(self.is_mete_nolonger_visible)
-                
-        
+
         if self.count == 1:
             self.spaceship.ship_hit()
             self.count = 0
-        
+
         if self.keyboard.right:
             # Still got rotation code if we need it in future
             #img_rot -= STEP
-            Game_started = True
             self.spaceship.vel.add(Vector(1, 0))
-            
 
         if self.keyboard.left:
             #img_rot += STEP
@@ -419,9 +416,9 @@ class Interaction:
         if self.keyboard.down:
             #img_rot += STEP
             self.spaceship.vel.add(Vector(0, 1))
-            
 
-meteorite = []  
+
+meteorite = []
 spaceship = SpaceShip(Vector(CANVAS_DIMS[0]/2, CANVAS_DIMS[1]/2), 40)
 kbd = Keyboard()
 countdown = Countdown(Vector(100, 100), 100)
