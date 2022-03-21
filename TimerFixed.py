@@ -146,32 +146,29 @@ class Vector:
 WIDTH = 700
 HEIGHT = 700
 CANVAS_DIMS = (WIDTH, HEIGHT)
-NUM_METEORITES = 10  # you can change the number of mete
+Game_end = False
+Game_started = False
 
-image = simplegui.load_image(
-    'https://i.ytimg.com/vi/JPJ1doUobGY/maxresdefault.jpg')
-image_w = 1280
-image_h = 720
+background = simplegui.load_image(
+    'http://personal.rhul.ac.uk/zkac/332/planet_background_final.jpg')
+IMG_backgournd_DIMS = (1890, 1417)
+# this is position of picture not player sprite pos
+IMG_backgournd_CENTRE = (IMG_backgournd_DIMS[0]/2, IMG_backgournd_DIMS[1]/2)
 
 IMG_player = simplegui.load_image(
-    'https://clipartpngfree.com/download/sprite-elvish-spacecraft-opengameartorg')
-IMG_DIMS = (1000, 1000)
+    'http://personal.rhul.ac.uk/zkac/332/DurrrSpaceShip_1.png')
+IMG_Player_DIMS = (80, 80)
 # this is position of picture not player sprite pos
-IMG_CENTRE = (IMG_DIMS[0]/2, IMG_DIMS[1]/2)
+IMG_Player_CENTRE = (IMG_Player_DIMS[0]/2, IMG_Player_DIMS[1]/2)
 
-
-# https://pngset.com/images/download-free-asteroid-redirect-asteroid-rock-limestone-moon-outer-space-transparent-png-2831660.png
 IMG_meteorite = simplegui.load_image(
-    'https://clipartpngfree.com/thumbnail/learning/secondary_school_what_to_learn.png')
-IMG_Met_DIMS = (1024, 832)
+    'http://personal.rhul.ac.uk/zkac/332/Meteorite.gif')
+IMG_Met_DIMS = (1503, 1213)
 # this is position of picture not player sprite pos
 IMG_Met_CENTRE = (IMG_Met_DIMS[0]/2, IMG_Met_DIMS[1]/2)
 
-
 STEP = 0.9
 img_rot = 0
-
-# Global variables
 img_dest_dim = (90, 90)
 
 
@@ -198,7 +195,14 @@ class Score:
                          self.SCORE_TEXT_COLOR)
 
     def on_hit(self):
-            self.score_val = self.score_val - 200
+        self.score_val = self.score_val + -1
+
+    def score_up(self):
+        self.score_val = self.score_val + 1
+
+    def get_score(self):
+        return self.score_val
+
 
 class Countdown:
     CLOCK_TEXT_SIZE = 50
@@ -219,15 +223,17 @@ class Countdown:
         self.timer.start()
 
     def tick(self):
-        if self.time_left > 0:
+        if self.time_left > 0 and Game_started:
             self.time_left -= 1
         else:
             self.timer.stop()
 
     def time_end(self):
+        global Game_end
         if self.time_left == 0:
-            print("Game Over!")
-            
+            Game_end = True
+
+
 class Meteorite:
     def __init__(self, pos, vel, radius):
         self.pos = pos
@@ -247,17 +253,25 @@ class Meteorite:
 
 
 class SpaceShip:
+    LIVES_TEXT_SIZE = 50
+    LIVES_TEXT_COLOR = "white"
+
     def __init__(self, pos, radius):
         self.pos = pos
         self.vel = Vector()
         self.radius = radius
         self.img_rot = 0
         self.vel_y = 0
+        self.lives = 3
 
     def draw(self, canvas):
         global img_rot
-        canvas.draw_image(IMG_player, IMG_CENTRE, IMG_DIMS,
+        canvas.draw_image(IMG_player, IMG_Player_CENTRE, IMG_Player_DIMS,
                           self.pos.get_p(), img_dest_dim, img_rot)
+        canvas.draw_text(str(self.lives),
+                         ((100), (200)),
+                         self.LIVES_TEXT_SIZE,
+                         self.LIVES_TEXT_COLOR)
 
     def update(self):
         self.pos.add(self.vel)
@@ -272,11 +286,14 @@ class SpaceShip:
             self.pos.set_p((X), (HEIGHT + self.radius))
         if (Y - self.radius) > HEIGHT:
             self.pos.set_p((X), (0 - self.radius))
-    # def on_ground(self):
-        # if self.pos.y >= CANVAS_DIMS[1]-40:
-            # return True
-       # else:
-            # return False
+
+    def ship_hit(self):
+        self.lives = self.lives - 1
+
+    def game_over(self):
+        global Game_end
+        if self.lives <= 0:
+            Game_end = True
 
 
 class Keyboard:
@@ -285,6 +302,7 @@ class Keyboard:
         self.left = False
         self.up = False
         self.down = False
+        self.space = False
 
     def keyDown(self, key):
         if key == simplegui.KEY_MAP['right']:
@@ -313,6 +331,15 @@ class Keyboard:
             self.down = False
 
 
+def click(pos):
+    global Game_started
+    screen = [WIDTH, HEIGHT]
+    is_in_width = (screen[0] - screen[0]) < pos[0] < (screen[0])  # 0 -> 700
+    is_in_height = (screen[1] - screen[1]) < pos[1] < (screen[1])  # 0 -> 700
+    if not Game_started and is_in_width and is_in_height:
+        Game_started = True
+
+
 class Interaction:
     def __init__(self, meteorite, spaceship, keyboard, countdown, score):
         self.meteorite = meteorite
@@ -320,10 +347,10 @@ class Interaction:
         self.keyboard = keyboard
         self.countdown = countdown
         self.score = score
-        self.countdown.start()
-        self.in_collision = []
+        self.in_collision = set()
         self.collision_occured = False
-        self.is_mete_visible = True
+        self.is_mete_nolonger_visible = set()
+        self.count = 0
 
     def hit(self, spaceship, meteorite):  # provisional instance val
         distance = spaceship.pos.copy().subtract(meteorite.pos)
@@ -331,24 +358,48 @@ class Interaction:
         return distance.length() <= spaceship.radius + meteorite.radius
 
     def draw_handler(self, canvas):
-        canvas.draw_image(image, (image_w/2, image_h/2), (WIDTH, HEIGHT),
-                          (WIDTH/2, HEIGHT/2), (WIDTH, HEIGHT))  # this is for background
-        self.update()
-        for met in self.meteorite:
-            if self.is_mete_visible:
-                met.draw(canvas)  # read the list of meteorite
-        self.spaceship.draw(canvas)
-        self.countdown.draw(canvas)
-        self.score.draw(canvas)
+        if not Game_end and not Game_started:
+            canvas.draw_text('SPACEY', (260, 100), 50, 'Blue', 'monospace')
+            canvas.draw_text('How to play: ', (260, 200),
+                             25, 'Blue', 'monospace')
+            canvas.draw_text(
+                'Use the arrow keys to control your spaceship ', (80, 250), 20, 'Gray', 'monospace')
+            canvas.draw_text('and dodge the asteroids',
+                             (200, 275), 20, 'Gray', 'monospace')
+            canvas.draw_text('lives are lost when a collision occurs',
+                             (120, 325), 20, 'Gray', 'monospace')
+            canvas.draw_text(
+                'Points are gained for the amount of time survived', (50, 375), 20, 'Gray', 'monospace')
+            canvas.draw_text('Survive till the end to win!',
+                             (20, 475), 40, 'Blue', 'monospace')
+            canvas.draw_text('Good luck', (225, 550), 40, 'Red', 'monospace')
+            canvas.draw_text('Click screen to begin...',
+                             (150, 625), 30, 'White', 'monospace')
+        elif not Game_end and Game_started:
+            self.update()
+            canvas.draw_image(background, IMG_backgournd_CENTRE, IMG_backgournd_DIMS,
+                              (WIDTH/2, HEIGHT/2), IMG_backgournd_DIMS)  # this is for background
+            for met in self.meteorite:
+                if not met in self.is_mete_nolonger_visible:  # if not mete which hasn't occurred
+                    met.draw(canvas)  # read the list of meteorite
+            self.spaceship.draw(canvas)
+            self.countdown.draw(canvas)
+            self.score.draw(canvas)
+        else:
+            canvas.draw_text('GAME OVER', (215, 300), 50, 'Red', 'monospace')
+            canvas.draw_text('You got ' + str(self.score.get_score()) +
+                             ' points', (215, 350), 25, 'White', 'monospace')
 
     def collide(self, spaceship, meteorite):
         if self.hit(spaceship, meteorite):
-            shipmete = (spaceship, meteorite) in self.in_collision
+            mete_exist = meteorite in self.in_collision
             self.score.on_hit()
-            if not shipmete:
-                self.in_collision.append((spaceship, meteorite))
+            if not mete_exist:
+                self.in_collision.add(meteorite)
+                self.is_mete_nolonger_visible.add(meteorite)
                 self.collision_occured = True
-                self.is_mete_visible = False
+                self.count += 1
+                score_value = self.score.score_val - 100
 
     # check wether the meteorite within the canvas
 
@@ -365,11 +416,14 @@ class Interaction:
         self.meteorite.append(rand_meteorite())
 
     def update(self):
-        score_value = 0
+        global Game_started
         for met in self.meteorite:
             met.update()
         self.spaceship.update()
+        self.countdown.start()
         self.countdown.time_end()
+        self.spaceship.game_over()
+        self.score.score_up()
 
         for met in self.meteorite:
             if met != self.spaceship:
@@ -377,8 +431,11 @@ class Interaction:
 
         for met in self.in_collision:
             if self.collision_occured:
-                score_value = self.score.score_val - 100
-                self.in_collision.remove(met)
+                self.in_collision.discard(self.is_mete_nolonger_visible)
+
+        if self.count == 1:
+            self.spaceship.ship_hit()
+            self.count = 0
 
         if self.keyboard.right:
             # Still got rotation code if we need it in future
@@ -398,11 +455,11 @@ class Interaction:
             self.spaceship.vel.add(Vector(0, 1))
 
 
-meteorite = [rand_meteorite() for i in range(NUM_METEORITES)]  # ?
+meteorite = []
 spaceship = SpaceShip(Vector(CANVAS_DIMS[0]/2, CANVAS_DIMS[1]/2), 40)
 kbd = Keyboard()
-countdown = Countdown(Vector(100, 100), 100)
-score = Score(Vector(500, 100), 1000)
+countdown = Countdown(Vector(100, 100), 50)
+score = Score(Vector(500, 100), 0)
 
 inter = Interaction(meteorite, spaceship, kbd, countdown, score)
 
@@ -410,8 +467,8 @@ frame = simplegui.create_frame('Interactions', CANVAS_DIMS[0], CANVAS_DIMS[1])
 frame.set_draw_handler(inter.draw_handler)
 frame.set_keydown_handler(kbd.keyDown)
 frame.set_keyup_handler(kbd.keyUp)
+frame.set_mouseclick_handler(click)
 
 timer = simplegui.create_timer(1000, inter.show_rand_mete)
-
 timer.start()
 frame.start()
