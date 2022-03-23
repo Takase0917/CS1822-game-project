@@ -436,9 +436,10 @@ class Interaction:
 
     def show_rand_mete(self):
         if not Game_restart:
-            self.meteorite.append(rand_meteorite())
+            self.meteorite.add(rand_meteorite())
         else:
-            self.meteorite.append(reset_rand_meteorite())
+            self.meteorite.discard(rand_meteorite())
+            self.meteorite.add(reset_rand_meteorite())
 
     def update(self):
         global Game_started
@@ -452,7 +453,8 @@ class Interaction:
 
         for met in self.meteorite:
             global img_rot
-            img_rot -= STEP
+            if not Game_restart:
+                img_rot -= STEP
             if met != self.spaceship:
                 self.collide(self.spaceship, met)
 
@@ -482,10 +484,10 @@ class Interaction:
             self.spaceship.vel.add(Vector(0, 1))
 
 
-meteorite = []
+meteorite = set()
 spaceship = SpaceShip(Vector(CANVAS_DIMS[0]/2, CANVAS_DIMS[1]/2), 40)
 kbd = Keyboard()
-countdown = Countdown(Vector(100, 100), 50)
+countdown = Countdown(Vector(100, 100), 15)
 score = Score(Vector(500, 100), 0)
 
 inter = Interaction(meteorite, spaceship, kbd, countdown, score)
