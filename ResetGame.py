@@ -380,6 +380,7 @@ class Interaction:
         self.in_collision = set()
         self.collision_occured = False
         self.is_mete_nolonger_visible = set()
+        self.is_rand_mete_nolonger_visible = set()
         self.count = 0
 
     def hit(self, spaceship, meteorite):  # provisional instance val
@@ -447,21 +448,26 @@ class Interaction:
         if meteorite.pos.y - meteorite.radius > HEIGHT:
             return True
 
-    def show_rand_mete(self):
+    def rand_mete_handle(self):
         if not Game_restart:
             self.meteorite.add(rand_meteorite())
+        else:
+            self.is_rand_mete_nolonger_visible.add(rand_meteorite())
         if self.countdown.get_time_left() < 35 and not Game_end:
             self.score.score_up(2)
         if self.countdown.get_time_left() < 25 and not Game_end:
             self.score.score_up(4)
         if self.countdown.get_time_left() < 15 and not Game_end:
             self.score.score_up(8)
-        else:
-            self.meteorite.discard(rand_meteorite())
-            self.meteorite.add(reset_rand_meteorite())
+        self.show_rand_mete()
+
+    def show_rand_mete(self):
+        for met in self.meteorite:
+            self.meteorite.discard(self.is_rand_mete_nolonger_visible)
+        if Game_restart:
+            self.meteorite.add(rand_meteorite())
 
     def update(self):
-        global Game_started
         for met in self.meteorite:
             met.update()
         self.spaceship.update()
@@ -516,7 +522,6 @@ frame.set_keydown_handler(kbd.keyDown)
 frame.set_keyup_handler(kbd.keyUp)
 frame.set_mouseclick_handler(click)
 frame.add_button("Restart", button)
-
-timer = simplegui.create_timer(1000, inter.show_rand_mete)
+timer = simplegui.create_timer(1000, inter.rand_mete_handle)
 timer.start()
 frame.start()
