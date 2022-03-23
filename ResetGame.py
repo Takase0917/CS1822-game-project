@@ -505,7 +505,7 @@ class Interaction:
 meteorite = set()
 spaceship = SpaceShip(Vector(CANVAS_DIMS[0]/2, CANVAS_DIMS[1]/2), 40)
 kbd = Keyboard()
-countdown = Countdown(Vector(100, 100), 15)
+countdown = Countdown(Vector(100, 100), 50)
 score = Score(Vector(500, 100), 0)
 
 inter = Interaction(meteorite, spaceship, kbd, countdown, score)
