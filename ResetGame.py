@@ -169,9 +169,14 @@ IMG_Met_DIMS = (1503, 1213)
 # this is position of picture not player sprite pos
 IMG_Met_CENTRE = (IMG_Met_DIMS[0]/2, IMG_Met_DIMS[1]/2)
 
-STEP = 0.01
 img_rot = 0
 img_dest_dim = (90, 90)
+
+
+def rand_step():
+    STEP = random.choice([0.03, 0.04, 0.05])
+
+    return STEP
 
 
 def rand_meteorite():
@@ -207,8 +212,8 @@ class Score:
     def on_hit(self):
         self.score_val = self.score_val + -1
 
-    def score_up(self):
-        self.score_val = self.score_val + 1
+    def score_up(self, add):
+        self.score_val = self.score_val + add
 
     def get_score(self):
         return self.score_val
@@ -242,6 +247,9 @@ class Countdown:
         global Game_end
         if self.time_left == 0:
             Game_end = True
+
+    def get_time_left(self):
+        return self.time_left
 
 
 class Meteorite:
@@ -408,7 +416,12 @@ class Interaction:
             self.countdown.draw(canvas)
             self.score.draw(canvas)
         else:
-            canvas.draw_text('GAME OVER', (215, 300), 50, 'Red', 'monospace')
+            if self.countdown.get_time_left() > 0:
+                canvas.draw_text('GAME OVER', (215, 300),
+                                 50, 'Red', 'monospace')
+            else:
+                canvas.draw_text('YOU WIN', (235, 300),
+                                 50, 'green', 'monospace')
             canvas.draw_text('You got ' + str(self.score.get_score()) +
                              ' points', (215, 350), 25, 'White', 'monospace')
 
@@ -437,6 +450,12 @@ class Interaction:
     def show_rand_mete(self):
         if not Game_restart:
             self.meteorite.add(rand_meteorite())
+        if self.countdown.get_time_left() < 35 and not Game_end:
+            self.score.score_up(2)
+        if self.countdown.get_time_left() < 25 and not Game_end:
+            self.score.score_up(4)
+        if self.countdown.get_time_left() < 15 and not Game_end:
+            self.score.score_up(8)
         else:
             self.meteorite.discard(rand_meteorite())
             self.meteorite.add(reset_rand_meteorite())
@@ -449,12 +468,11 @@ class Interaction:
         self.countdown.start()
         self.countdown.time_end()
         self.spaceship.game_over()
-        self.score.score_up()
+        self.score.score_up(1)
+        global img_rot
+        img_rot -= rand_step()
 
         for met in self.meteorite:
-            global img_rot
-            if not Game_restart:
-                img_rot -= STEP
             if met != self.spaceship:
                 self.collide(self.spaceship, met)
 
