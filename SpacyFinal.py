@@ -148,6 +148,8 @@ HEIGHT = 700
 CANVAS_DIMS = (WIDTH, HEIGHT)
 Game_end = False
 Game_started = False
+Game_restart = False
+
 
 background = simplegui.load_image(
     'http://personal.rhul.ac.uk/zkac/332/planet_background_final.jpg')
@@ -167,25 +169,34 @@ IMG_Met_DIMS = (1503, 1213)
 # this is position of picture not player sprite pos
 IMG_Met_CENTRE = (IMG_Met_DIMS[0]/2, IMG_Met_DIMS[1]/2)
 
+sound = simplegui.load_sound(
+    'http://personal.rhul.ac.uk/zkac/332/BoxCat-Games-Battle-Boss.mp3')
+
 img_rot = 0
 img_dest_dim = (90, 90)
 
+
 def rand_step():
     STEP = random.choice([0.03, 0.04, 0.05])
-    
     return STEP
+
 
 def rand_meteorite():
     pos = Vector(random.randint(0, WIDTH), -40)
     vel = Vector(0, random.randint(3, 5))
     radius = random.randint(10, 50)
-    
+    return Meteorite(pos, vel, radius)
 
+
+def reset_rand_meteorite():
+    pos = Vector(random.randint(0, WIDTH), -40)
+    vel = Vector(0, random.randint(3, 5))
+    radius = random.randint(10, 50)
     return Meteorite(pos, vel, radius)
 
 
 class Score:
-    SCORE_TEXT_SIZE = 50
+    SCORE_TEXT_SIZE = 25
     SCORE_TEXT_COLOR = "white"
 
     def __init__(self, pos, score_val):
@@ -193,8 +204,8 @@ class Score:
         self.score_val = score_val
 
     def draw(self, canvas):
-        canvas.draw_text(str(self.score_val),
-                         self.pos.get_p(),
+        canvas.draw_text('Score: ' + str(self.score_val),
+                         self.pos,
                          self.SCORE_TEXT_SIZE,
                          self.SCORE_TEXT_COLOR)
 
@@ -209,7 +220,7 @@ class Score:
 
 
 class Countdown:
-    CLOCK_TEXT_SIZE = 50
+    CLOCK_TEXT_SIZE = 25
     CLOCK_TEXT_COLOR = "white"
 
     def __init__(self, pos, duration):
@@ -218,8 +229,8 @@ class Countdown:
         self.timer = simplegui.create_timer(1000, self.tick)
 
     def draw(self, canvas):
-        canvas.draw_text(str(self.time_left),
-                         self.pos.get_p(),
+        canvas.draw_text('Time left: ' + str(self.time_left),
+                         self.pos,
                          self.CLOCK_TEXT_SIZE,
                          self.CLOCK_TEXT_COLOR)
 
@@ -239,6 +250,9 @@ class Countdown:
 
     def get_time_left(self):
         return self.time_left
+
+    def reset(self):
+        self.time_left = 50
 
 
 class Meteorite:
@@ -261,7 +275,7 @@ class Meteorite:
 
 
 class SpaceShip:
-    LIVES_TEXT_SIZE = 50
+    LIVES_TEXT_SIZE = 25
     LIVES_TEXT_COLOR = "white"
 
     def __init__(self, pos, radius):
@@ -276,8 +290,8 @@ class SpaceShip:
         global img_rot
         canvas.draw_image(IMG_player, IMG_Player_CENTRE, IMG_Player_DIMS,
                           self.pos.get_p(), img_dest_dim,)
-        canvas.draw_text(str(self.lives),
-                         ((100), (200)),
+        canvas.draw_text('Lives: ' + str(self.lives),
+                         ((25), (100)),
                          self.LIVES_TEXT_SIZE,
                          self.LIVES_TEXT_COLOR)
 
@@ -302,7 +316,7 @@ class SpaceShip:
         global Game_end
         if self.lives <= 0:
             Game_end = True
-            
+
 
 class Keyboard:
     def __init__(self):
@@ -348,6 +362,18 @@ def click(pos):
         Game_started = True
 
 
+def button():
+    global Game_started, Game_end, Game_restart
+    Game_started = False
+    Game_end = False
+    Game_restart = True
+    spaceship.lives = 3
+    countdown.time_left = 50
+    score.score_val = 0
+    spaceship.pos = Vector(CANVAS_DIMS[0]/2, CANVAS_DIMS[1]/2)
+    sound.play()
+
+
 class Interaction:
     def __init__(self, meteorite, spaceship, keyboard, countdown, score):
         self.meteorite = meteorite
@@ -374,10 +400,10 @@ class Interaction:
                 'Use the arrow keys to control your spaceship ', (80, 250), 20, 'Gray', 'monospace')
             canvas.draw_text('and dodge the asteroids',
                              (200, 275), 20, 'Gray', 'monospace')
-            canvas.draw_text('Lives are lost when a collision occurs',
+            canvas.draw_text('lives are lost when a collision occurs',
                              (120, 325), 20, 'Gray', 'monospace')
             canvas.draw_text(
-                'Difficulty and points gained increase with time survived', (50, 375), 20, 'Gray', 'monospace')
+                'Points are gained for the amount of time survived', (50, 375), 20, 'Gray', 'monospace')
             canvas.draw_text('Survive till the end to win!',
                              (20, 475), 40, 'Blue', 'monospace')
             canvas.draw_text('Good luck', (225, 550), 40, 'Red', 'monospace')
@@ -394,10 +420,13 @@ class Interaction:
             self.countdown.draw(canvas)
             self.score.draw(canvas)
         else:
+            sound.pause()
             if self.countdown.get_time_left() > 0:
-                canvas.draw_text('GAME OVER', (215, 300), 50, 'Red', 'monospace')
+                canvas.draw_text('GAME OVER', (215, 300),
+                                 50, 'Red', 'monospace')
             else:
-                canvas.draw_text('YOU WIN', (235, 300), 50, 'green', 'monospace')
+                canvas.draw_text('YOU WIN', (235, 300),
+                                 50, 'green', 'monospace')
             canvas.draw_text('You got ' + str(self.score.get_score()) +
                              ' points', (215, 350), 25, 'White', 'monospace')
 
@@ -424,16 +453,20 @@ class Interaction:
             return True
 
     def show_rand_mete(self):
-        self.meteorite.append(rand_meteorite())
+        if not Game_restart:
+            self.meteorite.add(rand_meteorite())
         if self.countdown.get_time_left() < 35 and not Game_end:
-            self.meteorite.append(rand_meteorite())
             self.score.score_up(2)
+            self.meteorite.add(rand_meteorite())
         if self.countdown.get_time_left() < 25 and not Game_end:
-            self.meteorite.append(rand_meteorite())
             self.score.score_up(4)
+            self.meteorite.add(rand_meteorite())
         if self.countdown.get_time_left() < 15 and not Game_end:
-            self.meteorite.append(rand_meteorite())
             self.score.score_up(8)
+            self.meteorite.add(rand_meteorite())
+        else:
+            self.meteorite.discard(rand_meteorite())
+            self.meteorite.add(reset_rand_meteorite())
 
     def update(self):
         global Game_started
@@ -477,11 +510,11 @@ class Interaction:
             self.spaceship.vel.add(Vector(0, 1))
 
 
-meteorite = []
+meteorite = set()
 spaceship = SpaceShip(Vector(CANVAS_DIMS[0]/2, CANVAS_DIMS[1]/2), 40)
 kbd = Keyboard()
-countdown = Countdown(Vector(100, 100), 50)
-score = Score(Vector(500, 100), 0)
+countdown = Countdown((25, 50), 50)
+score = Score((550, 50), 0)
 
 inter = Interaction(meteorite, spaceship, kbd, countdown, score)
 
@@ -490,7 +523,9 @@ frame.set_draw_handler(inter.draw_handler)
 frame.set_keydown_handler(kbd.keyDown)
 frame.set_keyup_handler(kbd.keyUp)
 frame.set_mouseclick_handler(click)
+frame.add_button("Restart", button)
 
 timer = simplegui.create_timer(1000, inter.show_rand_mete)
 timer.start()
 frame.start()
+sound.play()
